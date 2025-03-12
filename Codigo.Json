@@ -1,0 +1,72 @@
+#include <Servo.h>
+#include <DHT.h>
+#include <ArduinoJson.h>
+
+#include <Servo.h>
+#include <DHT.h>
+#include <ArduinoJson.h>
+
+#define DHTPIN 2     
+#define DHTTYPE DHT11
+#define LDRPIN A0     
+
+Servo meuServo;
+DHT dht(DHTPIN, DHTTYPE);
+const int pinoServo = 5;
+
+void setup() {
+    Serial.begin(9600);
+    meuServo.attach(pinoServo);
+    meuServo.write(90);
+    dht.begin();
+    Serial.println("Digite 1 para 0 graus, 2 para 90 graus, 3 para 180 graus");
+}
+
+void loop() {
+  
+    if (Serial.available()) {
+        char comando = Serial.read();
+        
+        if (comando == '1') {
+            meuServo.write(0);
+            Serial.println("Servo movido para 0 graus");
+        } else if (comando == '2') {
+            meuServo.write(90);
+            Serial.println("Servo movido para 90 graus");
+        } else if (comando == '3') {
+            meuServo.write(180);
+            Serial.println("Servo movido para 180 graus");
+        } else {
+            Serial.println("Comando inválido! Digite 1, 2 ou 3.");
+        }
+    }
+    
+   
+    static unsigned long lastReadTime = 0;
+    if (millis() - lastReadTime >= 3000) {
+        lastReadTime = millis();
+        
+        float temperaturaC = dht.readTemperature();
+        float umidade = dht.readHumidity();
+        int ldrValor = analogRead(LDRPIN);
+        
+      
+        if (isnan(temperaturaC) || isnan(umidade)) {
+            Serial.println("{\"erro\": \"Falha na leitura do DHT11\"}");
+            return;
+        }
+        
+        
+        StaticJsonDocument<200> jsonDoc;
+        jsonDoc["temperatura"] = temperaturaC;
+        jsonDoc["umidade"] = umidade;
+        jsonDoc["luminosidade"] = map(ldrValor, 0, 1023, 0, 100); 
+        
+        
+        String jsonString;
+        serializeJson(jsonDoc, jsonString);
+        
+        Serial.println(jsonString);
+    }
+}
+
